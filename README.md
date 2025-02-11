@@ -1,2 +1,2 @@
 # deepseek_with_tencentcloud
-![Uploading 17d1d68bc3386e2fa608740f8e5ad861.png…]()
+因为Deepseek服务器老是繁忙，而现在通过腾讯云可以免费调用deepseek—r1，写了个简单的网页通过腾讯云的API调用
