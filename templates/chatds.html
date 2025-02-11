@@ -1,0 +1,289 @@
+<!-- templates/index.html -->
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DeepSeek Chat</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.0.5/purify.min.js"></script>
+    <style>
+        :root {
+            --deepseek-blue: #1764FF;
+            --deepseek-bg: #F7F9FF;
+            --text-primary: #1A1A1A;
+            --text-secondary: #666;
+        }
+
+        body {
+            margin: 0;
+            background: var(--deepseek-bg);
+            font-family: -apple-system, BlinkMacSystemFont,
+                        'Segoe UI', Roboto, Oxygen-Sans, Ubuntu, Cantarell,
+                        'Helvetica Neue', sans-serif;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .chat-header {
+            text-align: center;
+            padding: 40px 0;
+        }
+
+        .logo {
+            width: 180px;
+            margin-bottom: 20px;
+        }
+
+        .chat-window {
+            background: white;
+            border-radius: 24px;
+            box-shadow: 0 8px 32px rgba(23, 100, 255, 0.1);
+            height: 70vh;
+            overflow-y: auto;
+            padding: 24px;
+            margin-bottom: 20px;
+        }
+
+        .message {
+            margin: 16px 0;
+            display: flex;
+            gap: 16px;
+            animation: messageAppear 0.3s ease;
+        }
+
+        .message-user {
+            flex-direction: row-reverse;
+        }
+
+        .avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 8px;
+            flex-shrink: 0;
+        }
+
+        .user-avatar {
+            background: var(--deepseek-blue);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+        }
+
+        .bot-avatar {
+            background: #E6EFFF;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .message-content {
+            max-width: 80%;
+            padding: 16px;
+            border-radius: 12px;
+            line-height: 1.6;
+        }
+
+        .user-content {
+            background: var(--deepseek-blue);
+            color: white;
+            border-radius: 12px 12px 4px 12px;
+        }
+
+        .bot-content {
+            background: #F7F9FF;
+            border: 1px solid #E6EFFF;
+            border-radius: 4px 12px 12px 12px;
+        }
+
+        .code-block {
+            background: rgba(0,0,0,0.05);
+            padding: 12px;
+            border-radius: 8px;
+            font-family: 'Menlo', monospace;
+            font-size: 0.9em;
+            margin: 8px 0;
+            overflow-x: auto;
+        }
+
+        .input-area {
+            display: flex;
+            gap: 12px;
+            background: white;
+            padding: 16px;
+            border-radius: 16px;
+            box-shadow: 0 4px 16px rgba(23, 100, 255, 0.1);
+        }
+
+        #user-input {
+            flex: 1;
+            padding: 12px 16px;
+            border: 2px solid #E6EFFF;
+            border-radius: 12px;
+            font-size: 16px;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        #user-input:focus {
+            border-color: var(--deepseek-blue);
+        }
+
+        button {
+            padding: 12px 24px;
+            background: var(--deepseek-blue);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: opacity 0.2s;
+        }
+
+        button:hover {
+            opacity: 0.9;
+        }
+
+        .typing-indicator {
+            display: inline-flex;
+            gap: 4px;
+            padding: 12px 16px;
+            background: #F7F9FF;
+            border-radius: 12px;
+        }
+
+        .typing-dot {
+            width: 8px;
+            height: 8px;
+            background: #B3CDFF;
+            border-radius: 50%;
+            animation: typing 1.4s infinite;
+        }
+
+        @keyframes messageAppear {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        @keyframes typing {
+            0%, 40%, 100% { transform: translateY(0); }
+            20% { transform: translateY(-6px); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="chat-header">
+            <!-- 替换为实际logo URL -->
+            <img src="https://example.com/deepseek-logo.png" class="logo" alt="DeepSeek">
+        </div>
+
+        <div class="chat-window" id="chat-window">
+            <div class="message">
+                <div class="bot-avatar avatar">🤖</div>
+                <div class="message-content bot-content">
+                    您好！我是DeepSeek人工智能助手，很高兴为您服务
+                </div>
+            </div>
+        </div>
+
+        <div class="input-area">
+            <input type="text" id="user-input" placeholder="输入您的问题..." autocomplete="off">
+            <button onclick="sendMessage()">发送</button>
+        </div>
+    </div>
+
+    <script>
+        let isProcessing = false;
+
+        function createMessage(content, isUser) {
+            const message = document.createElement('div');
+            message.className = `message ${isUser ? 'message-user' : ''}`;
+
+            message.innerHTML = `
+                <div class="${isUser ? 'user-avatar' : 'bot-avatar'} avatar">
+                    ${isUser ? '👤' : '🤖'}
+                </div>
+                <div class="message-content ${isUser ? 'user-content' : 'bot-content'}">
+                    ${formatContent(content)}
+                </div>
+            `;
+
+            return message;
+        }
+
+        function formatContent(text) {
+            const cleanText = DOMPurify.sanitize(text);
+            return cleanText
+                .replace(/```([\s\S]+?)```/g, '<div class="code-block">$1</div>')
+                .replace(/\n/g, '<br>');
+        }
+
+        async function sendMessage() {
+            if (isProcessing) return;
+
+            const input = document.getElementById('user-input');
+            const message = input.value.trim();
+            if (!message) return;
+
+            const chatWindow = document.getElementById('chat-window');
+            chatWindow.appendChild(createMessage(message, true));
+            input.value = '';
+
+            try {
+                isProcessing = true;
+
+                // 添加加载状态
+                const typingIndicator = document.createElement('div');
+                typingIndicator.className = 'message';
+                typingIndicator.innerHTML = `
+                    <div class="bot-avatar avatar">🤖</div>
+                    <div class="message-content bot-content">
+                        <div class="typing-indicator">
+                            <div class="typing-dot"></div>
+                            <div class="typing-dot" style="animation-delay: 0.2s"></div>
+                            <div class="typing-dot" style="animation-delay: 0.4s"></div>
+                        </div>
+                    </div>
+                `;
+                chatWindow.appendChild(typingIndicator);
+                chatWindow.scrollTop = chatWindow.scrollHeight;
+
+                const response = await fetch('/chat', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ message })
+                });
+
+                chatWindow.removeChild(typingIndicator);
+                const data = await response.json();
+
+                if (data.error) throw new Error(data.error);
+
+                const botMessage = createMessage(data.content, false);
+                chatWindow.appendChild(botMessage);
+                chatWindow.scrollTop = chatWindow.scrollHeight;
+
+            } catch (error) {
+                const errorMsg = createMessage(`错误：${error.message}`, false);
+                chatWindow.appendChild(errorMsg);
+            } finally {
+                isProcessing = false;
+            }
+        }
+
+        // 回车发送支持
+        document.getElementById('user-input').addEventListener('keypress', e => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                sendMessage();
+            }
+        });
+    </script>
+</body>
+</html>
